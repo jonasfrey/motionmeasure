@@ -1,0 +1,1229 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Motionmeasure · Projects & highlights</title>
+    <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101416;
+      --panel: #192023;
+      --line: #303a3e;
+      --muted: #9aacaf;
+      --accent: #bafa78;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: #f0f3ef;
+      font: 14px/1.5 system-ui,sans-serif;
+    }
+    button,
+    input,
+    select,
+    a {
+      font: inherit;
+    }
+    button,
+    a.button {
+      cursor: pointer;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 12px;
+      background: #263034;
+      color: inherit;
+      text-decoration: none;
+    }
+    button:hover,
+    a.button:hover {
+      border-color: var(--accent);
+    }
+    button.primary {
+      background: var(--accent);
+      color: #1a2414;
+      border-color: var(--accent);
+      font-weight: 650;
+    }
+    button:disabled {
+      opacity: .4;
+      cursor: default;
+    }
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    header {
+      height: 76px;
+      padding: 0 28px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+    .logo {
+      width: 32px;
+      height: 32px;
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+      font-size: 20px;
+    }
+    h1 {
+      font-size: 20px;
+      letter-spacing: -.6px;
+      margin: 0;
+    }
+    header > span {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 295px minmax(0,1fr);
+      min-height: calc(100vh - 76px);
+    }
+    aside {
+      padding: 23px 18px;
+      border-right: 1px solid var(--line);
+    }
+    .eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.7px;
+      color: var(--muted);
+      margin: 0 0 13px;
+    }
+    .drop {
+      border: 1px dashed #60716c;
+      border-radius: 9px;
+      background: #1b2420;
+      padding: 14px 10px;
+      text-align: center;
+      margin: 18px 0 12px;
+    }
+    .drop.drag {
+      border-color: var(--accent);
+      background: #2b3c24;
+    }
+    .drop p {
+      color: var(--muted);
+      font-size: 11px;
+      margin: 4px 0;
+    }
+    .drop button {
+      background: transparent;
+      border: 0;
+      color: var(--accent);
+      font-weight: 650;
+    }
+    .wide {
+      width: 100%;
+    }
+    #files {
+      margin-top: 12px;
+      display: grid;
+      gap: 7px;
+      max-height: 60vh;
+      overflow: auto;
+    }
+    .file {
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel);
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+    .file > div:first-child {
+      flex: 1;
+      min-width: 0;
+    }
+    .file strong {
+      display: block;
+      overflow-wrap: anywhere;
+      font-size: 11px;
+      font-weight: 550;
+    }
+    .file small {
+      color: var(--muted);
+      font-size: 10px;
+    }
+    .file button,
+    .tiny {
+      padding: 3px 7px;
+      font-size: 12px;
+    }
+    .file .moves {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    main {
+      min-width: 0;
+      padding: 28px 30px;
+      max-width: 1500px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .heading {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    h2 {
+      font-size: 27px;
+      letter-spacing: -.8px;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+    .subtitle {
+      color: var(--muted);
+      margin: 5px 0 0;
+      font-size: 12px;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .screen {
+      background: #090c0d;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    video {
+      width: 100%;
+      max-height: 450px;
+      display: block;
+      min-height: 180px;
+    }
+    .placeholder {
+      min-height: 285px;
+      display: grid;
+      place-content: center;
+      text-align: center;
+      padding: 25px;
+      color: var(--muted);
+    }
+    .placeholder b {
+      font-size: 21px;
+      color: #d2dfd2;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .track {
+      height: 28px;
+      background: #263033;
+      position: relative;
+      margin: 13px 0 5px;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .track button {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      background: var(--accent);
+      border: 0;
+      border-radius: 2px;
+      min-width: 3px;
+      padding: 0;
+    }
+    .track button.chosen {
+      background: #61d6cc;
+    }
+    .track i {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 2px;
+      background: #fff;
+      pointer-events: none;
+    }
+    .track .boundary {
+      position: absolute;
+      height: 100%;
+      border-left: 1px dashed #849997;
+      pointer-events: none;
+    }
+    .scale {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .stats {
+      display: flex;
+      gap: 25px;
+      flex-wrap: wrap;
+      padding: 15px 0;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .stats strong {
+      font-size: 20px;
+      font-weight: 500;
+      color: white;
+      margin-right: 5px;
+    }
+    .sectionhead {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin: 22px 0 12px;
+    }
+    .sectionhead h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+    .sectionhead span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .events {
+      display: grid;
+      grid-template-columns: repeat(auto-fill,minmax(245px,1fr));
+      gap: 9px;
+      max-height: 420px;
+      overflow: auto;
+    }
+    .event {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel);
+      padding: 8px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .event.selected {
+      border-color: #61d6cc;
+      background: #1d3030;
+    }
+    .event.active {
+      box-shadow: inset 3px 0 var(--accent);
+    }
+    .event .play {
+      border: 0;
+      background: transparent;
+      padding: 0;
+      display: flex;
+      gap: 10px;
+      text-align: left;
+      align-items: center;
+      flex: 1;
+      min-width: 0;
+    }
+    .event img {
+      width: 78px;
+      height: 53px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    .event strong {
+      font-size: 12px;
+      display: block;
+    }
+    .event small {
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .event input {
+      accent-color: var(--accent);
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .edit {
+      margin-top: 25px;
+      border: 1px solid #4c6450;
+      border-radius: 10px;
+      padding: 17px;
+      background: #19231f;
+    }
+    .edit .sectionhead {
+      margin-top: 0;
+    }
+    .clips {
+      display: grid;
+      gap: 8px;
+    }
+    .clip {
+      display: grid;
+      grid-template-columns: minmax(100px,1fr) 100px 100px auto;
+      gap: 9px;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+    }
+    .clip b {
+      font-size: 12px;
+    }
+    .clip small {
+      color: var(--muted);
+      display: block;
+      font-size: 11px;
+    }
+    .clip .actions {
+      gap: 4px;
+    }
+    .clip label {
+      font-size: 10px;
+    }
+    .clip input {
+      padding: 5px!important;
+    }
+    .edit-options {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+    .edit-options label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .export-actions {
+      display: flex;
+      gap: 9px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .export-actions span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .export-result {
+      margin-top: 14px;
+    }
+    .export-result video {
+      max-height: 300px;
+      margin-top: 10px;
+    }
+    details.settings-panel {
+      margin-top: 26px;
+      border-top: 1px solid var(--line);
+      padding-top: 17px;
+    }
+    summary {
+      cursor: pointer;
+      color: #d3dfd2;
+    }
+    .settings {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 14px;
+      margin-top: 15px;
+    }
+    label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    input[type=number],
+    input[type=text],
+    select {
+      display: block;
+      width: 100%;
+      background: #20292d;
+      border: 1px solid var(--line);
+      color: white;
+      padding: 8px;
+      border-radius: 5px;
+      margin-top: 4px;
+    }
+    select {
+      margin-bottom: 9px;
+    }
+    .note {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .notice {
+      padding: 10px 13px;
+      border: 1px solid #647d4f;
+      background: #25321f;
+      border-radius: 6px;
+      margin-bottom: 13px;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+    }
+    .notice.error {
+      border-color: #ab635b;
+      background: #402522;
+    }
+    progress {
+      width: 100%;
+      accent-color: var(--accent);
+      height: 7px;
+      margin-top: 8px;
+    }
+    dialog {
+      width: min(430px,90vw);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      color: white;
+      padding: 24px;
+    }
+    dialog::backdrop {
+      background: #0009;
+    }
+    dialog h2 {
+      font-size: 21px;
+    }
+    dialog .actions {
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+    [hidden] {
+      display: none!important;
+    }
+    @media (max-width:950px) {
+      .layout {
+        grid-template-columns: 245px minmax(0,1fr);
+      }
+      main {
+        padding: 20px;
+      }
+      .heading {
+        display: block;
+      }
+      .heading .actions {
+        margin-top: 12px;
+      }
+      .clip {
+        grid-template-columns: 1fr 80px 80px;
+      }
+      .clip > .actions {
+        grid-column: 1/-1;
+      }
+      .settings {
+        grid-template-columns: repeat(2,1fr);
+      }
+    }
+    @media (max-width:650px) {
+      header {
+        padding: 0 18px;
+      }
+      header > span {
+        display: none;
+      }
+      .layout {
+        display: block;
+      }
+      aside {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      #files {
+        max-height: 210px;
+      }
+      .placeholder {
+        min-height: 200px;
+      }
+      .stats {
+        gap: 14px;
+      }
+      .sectionhead {
+        flex-wrap: wrap;
+      }
+      .clip {
+        grid-template-columns: 1fr 75px 75px;
+      }
+      .edit {
+        padding: 12px;
+      }
+      h2 {
+        font-size: 23px;
+      }
+    }
+    </style>
+  </head>
+  <body>
+    <header><div class="logo" aria-hidden="true">⌁</div><h1>motionmeasure</h1><span>PROJECTS → DETECTIONS → HIGHLIGHTS</span></header>
+    <div class="layout">
+      <aside>
+<p class="eyebrow">Your projects</p><label for="projects">Current project</label><select id="projects" aria-label="Current project"></select><button id="new-project" class="wide">＋ New project</button>
+<div class="drop" id="drop"><button id="choose" disabled>＋ Add videos to project</button><p>Drop one or several videos here</p><input type="file" id="upload" accept=".mp4,.mov,.mkv,.avi,.webm,.m4v" multiple hidden></div>
+<div class="sectionhead"><h3 style="font-size:13px">Playback order</h3><button class="tiny" id="sort" disabled>Sort by name</button></div><p class="note">Files play back-to-back in this order. Use the arrows to rearrange them.</p><div id="files"></div>
+      </aside>
+      <main>
+        <div id="notice" role="status" class="notice" hidden></div>
+        <div class="heading">
+          <div>
+            <p class="eyebrow">Continuous motion timeline</p>
+            <h2 id="title">Start a new project.</h2>
+            <p id="subtitle"
+              class="subtitle">Keep your footage together, find motion, and build a highlights video.</p>
+          </div>
+          <div
+            class="actions"><a class="button" id="download" hidden>↓ JSON</a><button id="analyze" class="primary" disabled>Analyze all files</button></div>
+        </div>
+        <div id="status" class="notice" hidden></div>
+        <div id="stale" class="notice"
+          hidden>The project’s files or order changed. Analyze all files again to update the timeline and create a new selection.</div>
+        <div class="screen">
+          <div class="placeholder"
+            id="placeholder"><b>One project. One continuous timeline.</b><span>Create a project and add videos to begin.</span></div>
+          <video id="video" controls preload="metadata" hidden></video>
+        </div>
+        <div class="track" id="timeline"
+          aria-label="Project motion timeline"></div>
+        <div
+          class="scale"><span id="current-time">00:00:00</span><span id="duration">00:00:00</span></div>
+        <div
+          class="stats"><span><strong id="count">—</strong>detections</span><span><strong id="motion">—</strong>with motion</span><span><strong id="length">—</strong>project duration</span></div>
+        <div class="sectionhead">
+          <h3>Detected moments</h3>
+          <div
+            class="actions"><span>Click to play · check to add</span><button id="select-all" class="tiny" disabled>Add all</button></div>
+        </div>
+        <div class="events" id="events">
+          <p
+            class="note">Detections from all project files will appear here.</p>
+        </div>
+        <section class="edit" aria-label="Highlights editor">
+          <div
+            class="sectionhead"><h3>Your highlights video</h3><button id="clear" class="tiny" disabled>Clear selection</button></div>
+          <p
+            class="note">Add interesting detections above. Reorder clips and adjust their start/end times in project seconds. Cuts can span file boundaries.</p>
+          <div id="clips" class="clips"></div>
+          <div
+            class="edit-options"><label><input id="audio" type="checkbox" checked disabled> Keep original audio</label><label><input id="boxes" type="checkbox" disabled> Include motion boxes (preview quality)</label></div>
+          <div
+            class="export-actions"><button id="preview-edit" disabled>▶ Preview selection</button><button class="primary" id="export" disabled>Export highlights MP4</button><span id="edit-summary">No clips selected</span><span id="save-state"></span></div>
+          <div id="export-status" class="notice" style="margin-top:14px"
+            hidden></div>
+          <div id="export-result" class="export-result"></div>
+        </section>
+        <details class="settings-panel">
+          <summary>Detection settings</summary>
+          <div class="settings">
+            <label>Analyze every Nth frame of first video<input data-key="step" type="number" min="1" max="120" step="1" value="5"></label>
+            <label>Analysis width (pixels)<input data-key="width" type="number" min="32" max="3840" step="1" value="960"></label>
+            <label>Analysis samples/sec (0 = use Nth frame)<input data-key="samples-per-second" type="number" min="0" max="120" step="0.1" value="0"></label>
+            <label>Minimum motion area (at default width)<input data-key="min-area" type="number" min="1" max="1000000" value="800"></label>
+            <label>Minimum event duration (seconds)<input data-key="min-duration" type="number" min="0" max="3600" step="0.1" value="1"></label>
+            <label>Merge quiet gaps (seconds)<input data-key="gap" type="number" min="0" max="60" step="0.1" value="1.5"></label>
+            <label>Threshold (lower = more sensitive)<input data-key="threshold" type="number" min="1" max="255" value="24"></label>
+            <label>Minimum motion samples at Nth-frame rate<input data-key="min-frames" type="number" min="1" max="10000" value="4"></label>
+          </div>
+          <p
+            class="note">Area thresholds adjust automatically with analysis width. An explicit samples/sec rate preserves the minimum positive-motion time and warm-up time implied by the Nth-frame settings, rounded up to whole samples. Lower rates can miss brief motion. The same background model continues across all files. Best for stationary cameras and constant-frame-rate footage. Review previews are silent and downscaled; clean exports use original footage with audio, at up to 1080p / 30 fps. Successful reanalysis resets the selection; previous exports are kept.</p>
+        </details>
+      </main>
+    </div>
+    <dialog id="project-dialog">
+      <form
+        id="project-form"><h2>Create a project</h2><p class="note">Give this collection of videos a name.</p><label>Project name<input id="project-name" type="text" maxlength="100" required placeholder="e.g. Garden camera · September 25"></label><div class="actions"><button type="button" id="cancel-project">Cancel</button><button class="primary" type="submit">Create project</button></div></form>
+    </dialog>
+    <script>
+    const $ = (id) => document.getElementById(id), video = $("video");
+    const escape = (s) =>
+      String(s).replace(
+        /[&<>"']/g,
+        (c) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        }[c]),
+      );
+    const clock = (s) => {
+      s = Math.max(0, Math.floor(s || 0));
+      return [Math.floor(s / 3600), Math.floor(s % 3600 / 60), s % 60].map((v) =>
+        String(v).padStart(2, "0")
+      ).join(":");
+    };
+    const duration = (s) => s < 60 ? `${s.toFixed(1)}s` : clock(s);
+    let selected = localStorage.getItem("motion-project"),
+      project = null,
+      draft = null,
+      resultKey = "",
+      filesKey = "",
+      exportsKey = "",
+      pollTimer = null,
+      refreshId = 0,
+      uploading = false,
+      saveChain = Promise.resolve(),
+      saveVersion = 0,
+      editPlayback = null;
+    function notice(message, error = false) {
+      $("notice").hidden = false;
+      $("notice").classList.toggle("error", error);
+      $("notice").textContent = message;
+    }
+    async function api(path, options) {
+      const r = await fetch(path, options);
+      const data = await r.json();
+      if (!r.ok || data.error) {
+        throw Error(data.error || `Request failed (${r.status})`);
+      }
+      return data;
+    }
+    const endpoint = (action = "", id = selected) =>
+      "/api/projects/" + id + (action ? "/" + action : "");
+    const media = (kind, id, name) => `/media/${selected}/${kind}/${id}/${name}`;
+    const post = (path, body) =>
+      api(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    function settings() {
+      const result = {};
+      for (const input of document.querySelectorAll("[data-key]")) {
+        if (!input.reportValidity()) {
+          throw Error("Correct the detection settings first.");
+        }
+        result[input.dataset.key] = Number(input.value);
+      }
+      return result;
+    }
+    const canEdit = () =>
+      !!project?.result && !project.stale && !project.busy && !uploading;
+    function showStatus(id, state) {
+      const el = $(id);
+      el.hidden = !state || state.state === "done";
+      el.classList.toggle("error", state?.state === "error");
+      el.replaceChildren();
+      if (el.hidden) return;
+      el.textContent = state.error ||
+        `${state.message || state.state} · ${Math.round(state.pct || 0)}%`;
+      if (state.state !== "error") {
+        const p = document.createElement("progress");
+        p.max = 100;
+        p.value = state.pct || 0;
+        el.append(p);
+      }
+    }
+    function playAt(t) {
+      editPlayback = null;
+      $("preview-edit").textContent = "▶ Preview selection";
+      video.currentTime = t;
+      video.play().catch((e) => {
+        if (e.name !== "AbortError") {
+          notice("Playback could not start: " + e.message, true);
+        }
+      });
+    }
+    function draftChanged() {
+      editPlayback = null;
+      $("preview-edit").textContent = "▶ Preview selection";
+      renderDraft();
+      syncChecks();
+      persistDraft();
+    }
+    function persistDraft() {
+      if (!draft) return;
+      const payload = structuredClone(draft),
+        id = selected,
+        version = ++saveVersion;
+      $("save-state").textContent = "Saving…";
+      saveChain = saveChain.catch(() => {}).then(() =>
+        post(endpoint("draft", id), payload)
+      ).then(() => {
+        if (selected === id && version === saveVersion) {
+          $("save-state").textContent = "Saved";
+        }
+      }).catch((e) => {
+        if (selected === id) {
+          $("save-state").textContent = "Not saved";
+          notice(e.message, true);
+        }
+      });
+    }
+    function syncChecks() {
+      const ids = new Set(draft?.clips.map((c) => c.segment_id) || []);
+      $("events").querySelectorAll(".event").forEach((el) => {
+        const yes = ids.has(el.dataset.id);
+        el.classList.toggle("selected", yes);
+        const input = el.querySelector("input");
+        input.checked = yes;
+        input.disabled = !canEdit();
+      });
+      $("timeline").querySelectorAll("button").forEach((b) =>
+        b.classList.toggle("chosen", ids.has(b.dataset.id))
+      );
+    }
+    function updateControls() {
+      const enabled = canEdit(), busy = !!project?.busy || uploading;
+      $("choose").disabled = !project || busy;
+      $("sort").disabled = !project || busy || project.files.length < 2;
+      $("analyze").disabled = !project || busy || !project.files.length;
+      $("select-all").disabled = !enabled || !project.result?.segments.length;
+      $("clear").disabled = !enabled || !draft?.clips.length;
+      $("export").disabled = !enabled || !draft?.clips.length;
+      $("preview-edit").disabled = !enabled || !draft?.clips.length;
+      $("audio").disabled = !enabled;
+      $("boxes").disabled = !enabled;
+      $("clips").querySelectorAll("input,button").forEach((el) =>
+        el.disabled = !enabled
+      );
+      syncChecks();
+    }
+    function renderDraft() {
+      const clips = draft?.clips || [];
+      $("clips").replaceChildren();
+      if (!clips.length) {
+        $("clips").innerHTML =
+          '<p class="note">Select detections to add your first clip.</p>';
+      }
+      clips.forEach((c, i) => {
+        const row = document.createElement("div");
+        row.className = "clip";
+        row.innerHTML = `<div><b>${String(i + 1).padStart(2, "0")} · ${
+          escape(c.segment_id.replace("event-", "Detection "))
+        }</b><small>${
+          duration(c.end - c.start)
+        }</small></div><label>Start (seconds)<input type="number" class="start" min="0" step="0.001" value="${
+          c.start.toFixed(3)
+        }"></label><label>End (seconds)<input type="number" class="end" min="0" step="0.001" value="${
+          c.end.toFixed(3)
+        }"></label><div class="actions"><button class="tiny play" title="Play this clip">▶</button><button class="tiny up" title="Move clip earlier">↑</button><button class="tiny down" title="Move clip later">↓</button><button class="tiny remove" title="Remove clip">×</button></div>`;
+        for (const key of ["start", "end"]) {
+          row.querySelector("." + key).onchange = (e) => {
+            const v = Number(e.target.value);
+            if (
+              !e.target.value || !Number.isFinite(v) || v < 0 ||
+              v > project.result.duration ||
+              (key === "start" ? v >= c.end : v <= c.start)
+            ) {
+              notice(
+                "Choose start/end times inside the project, with end after start.",
+                true,
+              );
+              renderDraft();
+              return;
+            }
+            c[key] = v;
+            draftChanged();
+          };
+        }
+        row.querySelector(".play").onclick = () => {
+          startEditPreview([structuredClone(c)]);
+        };
+        row.querySelector(".remove").onclick = () => {
+          draft.clips.splice(i, 1);
+          draftChanged();
+        };
+        row.querySelector(".up").onclick = () => {
+          if (i) {
+            [clips[i - 1], clips[i]] = [clips[i], clips[i - 1]];
+            draftChanged();
+          }
+        };
+        row.querySelector(".down").onclick = () => {
+          if (i < clips.length - 1) {
+            [clips[i + 1], clips[i]] = [clips[i], clips[i + 1]];
+            draftChanged();
+          }
+        };
+        $("clips").append(row);
+      });
+      $("audio").checked = draft?.audio !== false;
+      $("boxes").checked = draft?.boxes === true;
+      $("edit-summary").textContent = clips.length
+        ? `${clips.length} clips · ${
+          duration(clips.reduce((s, c) => s + c.end - c.start, 0))
+        }`
+        : "No clips selected";
+      updateControls();
+    }
+    function render() {
+      if (!project) return;
+      const p = project, ev = p.result;
+      $("title").textContent = p.name;
+      $("subtitle").textContent =
+        `${p.files.length} files · one continuous timeline${
+          p.busy ? " · job in progress" : ""
+        }`;
+      $("stale").hidden = !p.stale;
+      showStatus("status", p.analysisStatus);
+      showStatus("export-status", p.exportStatus);
+      const fk = JSON.stringify([p.files, p.busy, uploading, ev?.sources]);
+      if (fk !== filesKey) {
+        filesKey = fk;
+        $("files").replaceChildren();
+        p.files.forEach((f, i) => {
+          const source = !p.stale && ev?.sources.find((s) => s.id === f.id);
+          const row = document.createElement("div");
+          row.className = "file";
+          row.innerHTML = `<div><strong>${i + 1}. ${
+            escape(f.name)
+          }</strong><small>${
+            source
+              ? clock(source.start) + " → " + clock(source.end)
+              : Math.round(f.size / 1024 / 1024) + " MB"
+          }</small></div><div class="moves"><button class="up" title="Move file earlier" ${
+            i === 0 || p.busy || uploading ? "disabled" : ""
+          }>↑</button><button class="down" title="Move file later" ${
+            i === p.files.length - 1 || p.busy || uploading ? "disabled" : ""
+          }>↓</button></div>`;
+          row.querySelector(".up").onclick = () => moveFile(i, -1);
+          row.querySelector(".down").onclick = () => moveFile(i, 1);
+          $("files").append(row);
+        });
+        if (!p.files.length) {
+          $("files").innerHTML =
+            '<p class="note">This project has no files yet.</p>';
+        }
+      }
+      const key = p.id + "|" + (p.analysis?.id || "");
+      if (key !== resultKey) {
+        resultKey = key;
+        editPlayback = null;
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+        video.hidden = !ev;
+        $("placeholder").hidden = !!ev;
+        $("download").hidden = !ev;
+        $("timeline").replaceChildren();
+        $("events").replaceChildren();
+        $("current-time").textContent = clock(0);
+        for (const id of ["count", "motion", "length"]) $(id).textContent = "—";
+        $("duration").textContent = clock(0);
+        draft = p.draft ? structuredClone(p.draft) : null;
+        $("save-state").textContent = "";
+        if (ev) {
+          video.src = media("runs", p.analysis.id, "preview.mp4");
+          $("download").href = media("runs", p.analysis.id, "events.json") +
+            "?download";
+          $("download").download = p.name + ".json";
+          $("count").textContent = ev.segment_count;
+          $("motion").textContent = duration(ev.total_motion_s);
+          $("length").textContent = duration(ev.duration);
+          $("duration").textContent = clock(ev.duration);
+          ev.segments.forEach((s) => {
+            const marker = document.createElement("button");
+            marker.dataset.id = s.id;
+            marker.style.left = s.start / ev.duration * 100 + "%";
+            marker.style.width =
+              Math.max(s.duration, ev.sample_interval) / ev.duration * 100 + "%";
+            marker.title = `${s.id} · ${clock(s.start)}`;
+            marker.setAttribute("aria-label", marker.title);
+            marker.onclick = () => playAt(s.start);
+            $("timeline").append(marker);
+            const row = document.createElement("div");
+            row.className = "event";
+            row.dataset.id = s.id;
+            row.dataset.start = s.start;
+            row.dataset.end = s.end;
+            row.innerHTML = `<button class="play"><img src="${
+              media("runs", p.analysis.id, s.thumb)
+            }" alt="Motion thumbnail" loading="lazy"><span><strong>${
+              clock(s.start)
+            } → ${clock(s.end)}</strong><small>${duration(s.duration)}${
+              s.source_ids.length > 1 ? " · spans files" : ""
+            }</small></span></button><input type="checkbox" aria-label="Add ${
+              escape(s.id)
+            } to highlights">`;
+            row.querySelector(".play").onclick = () => playAt(s.start);
+            row.querySelector("input").onchange = (e) => {
+              if (e.target.checked) {
+                draft.clips.push({ segment_id: s.id, start: s.start, end: s.end });
+              } else draft.clips = draft.clips.filter((c) => c.segment_id !== s.id);
+              draftChanged();
+            };
+            $("events").append(row);
+          });
+          for (const source of ev.sources.slice(1)) {
+            const b = document.createElement("span");
+            b.className = "boundary";
+            b.style.left = source.start / ev.duration * 100 + "%";
+            $("timeline").append(b);
+          }
+          const cursor = document.createElement("i");
+          cursor.id = "cursor";
+          $("timeline").append(cursor);
+          if (!ev.segments.length) {
+            $("events").innerHTML =
+              '<p class="note">No motion met the current settings. Try a smaller minimum area or duration.</p>';
+          }
+        } else {$("events").innerHTML =
+            '<p class="note">Add videos and click Analyze all files to find detections.</p>';}
+        renderDraft();
+      }
+      const ek = p.id + "|" + JSON.stringify(p.exports);
+      if (ek !== exportsKey) {
+        exportsKey = ek;
+        $("export-result").replaceChildren();
+        for (const x of [...p.exports].reverse()) {
+          const block = document.createElement("details");
+          block.innerHTML = `<summary>Export · ${
+            new Date(x.created).toLocaleString()
+          } · ${x.clip_count} clips</summary><p><a class="button" href="${
+            media("exports", x.id, "highlights.mp4")
+          }?download" download="${
+            escape(p.name)
+          }-highlights.mp4">↓ Download MP4</a> <a class="button" href="${
+            media("exports", x.id, "edit.json")
+          }?download" download>↓ Edit JSON</a></p><video controls preload="none" src="${
+            media("exports", x.id, "highlights.mp4")
+          }"></video>`;
+          $("export-result").append(block);
+        }
+        if (p.exports.length) $("export-result").firstChild.open = true;
+      }
+      updateControls();
+    }
+    function startEditPreview(clips) {
+      editPlayback = { clips, index: 0 };
+      video.currentTime = clips[0].start;
+      video.play().catch((e) => {
+        if (e.name !== "AbortError") notice(e.message, true);
+      });
+      $("preview-edit").textContent = "■ Stop preview";
+    }
+    video.ontimeupdate = () => {
+      const ev = project?.result;
+      if (!ev) return;
+      $("current-time").textContent = clock(video.currentTime);
+      if ($("cursor")) {
+        $("cursor").style.left = video.currentTime / ev.duration * 100 + "%";
+      }
+      $("events").querySelectorAll(".event").forEach((b) =>
+        b.classList.toggle(
+          "active",
+          video.currentTime >= Number(b.dataset.start) &&
+            video.currentTime < Number(b.dataset.end),
+        )
+      );
+      if (
+        editPlayback &&
+        video.currentTime >= editPlayback.clips[editPlayback.index].end - .04
+      ) {
+        editPlayback.index++;
+        if (editPlayback.index >= editPlayback.clips.length) {
+          editPlayback = null;
+          video.pause();
+          $("preview-edit").textContent = "▶ Preview selection";
+        } else video.currentTime = editPlayback.clips[editPlayback.index].start;
+      }
+    };
+    video.onended = () => {
+      if (editPlayback) {
+        editPlayback.index++;
+        if (editPlayback.index < editPlayback.clips.length) {
+          video.currentTime = editPlayback.clips[editPlayback.index].start;
+          video.play().catch(() => {});
+        } else editPlayback = null;
+      }
+      if (!editPlayback) $("preview-edit").textContent = "▶ Preview selection";
+    };
+    video.onerror = () => {
+      if (video.getAttribute("src")) {
+        notice(
+          "The preview could not be loaded. Try analyzing the project again.",
+          true,
+        );
+      }
+    };
+    async function refresh() {
+      clearTimeout(pollTimer);
+      const token = ++refreshId;
+      try {
+        const { projects } = await api("/api/projects");
+        if (token !== refreshId) return;
+        if (!projects.some((p) => p.id === selected)) {
+          selected = projects[0]?.id || null;
+        }
+        const listKey = JSON.stringify(projects.map((p) => [p.id, p.name]));
+        if ($("projects").dataset.key !== listKey) {
+          $("projects").dataset.key = listKey;
+          $("projects").innerHTML = projects.map((p) =>
+            `<option value="${p.id}">${escape(p.name)}</option>`
+          ).join("") || "<option>Create your first project</option>";
+        }
+        $("projects").value = selected || "";
+        if (selected) {
+          const id = selected;
+          const data = await api(endpoint());
+          if (token !== refreshId || id !== selected) return;
+          project = data;
+          render();
+        }
+      } catch (e) {
+        notice(e.message, true);
+      } finally {
+        if (token === refreshId) pollTimer = setTimeout(refresh, 1800);
+      }
+    }
+    function selectProject(id) {
+      $("preview-edit").textContent = "▶ Preview selection";
+      selected = id;
+      localStorage.setItem("motion-project", id);
+      project = null;
+      draft = null;
+      resultKey = "";
+      filesKey = "";
+      exportsKey = "";
+      editPlayback = null;
+      video.pause();
+      renderDraft();
+      $("files").replaceChildren();
+      $("notice").hidden = true;
+      void refresh();
+    }
+    $("projects").onchange = (e) => selectProject(e.target.value);
+    $("new-project").onclick = () => {
+      $("project-dialog").showModal();
+      $("project-name").focus();
+    };
+    $("cancel-project").onclick = () => $("project-dialog").close();
+    $("project-form").onsubmit = async (e) => {
+      e.preventDefault();
+      const button = e.submitter ||
+        $("project-form").querySelector("[type=submit]");
+      button.disabled = true;
+      try {
+        const p = await post("/api/projects", { name: $("project-name").value });
+        $("project-dialog").close();
+        $("project-name").value = "";
+        selectProject(p.id);
+      } catch (error) {
+        notice(error.message, true);
+      } finally {
+        button.disabled = false;
+      }
+    };
+    async function reorder(ids) {
+      try {
+        await post(endpoint("order"), { ids });
+        await refresh();
+      } catch (e) {
+        notice(e.message, true);
+      }
+    }
+    function moveFile(index, delta) {
+      const ids = project.files.map((f) => f.id);
+      [ids[index], ids[index + delta]] = [ids[index + delta], ids[index]];
+      void reorder(ids);
+    }
+    $("sort").onclick = () =>
+      reorder(
+        [...project.files].sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { numeric: true })
+        ).map((f) => f.id),
+      );
+    $("analyze").onclick = async () => {
+      try {
+        const id = selected, params = settings();
+        await saveChain;
+        await post(endpoint("analyze", id), params);
+        await refresh();
+      } catch (e) {
+        notice(e.message, true);
+      }
+    };
+    $("select-all").onclick = () => {
+      const ids = new Set(draft.clips.map((c) => c.segment_id));
+      for (const s of project.result.segments) {
+        if (!ids.has(s.id)) {
+          draft.clips.push({ segment_id: s.id, start: s.start, end: s.end });
+        }
+      }
+      draftChanged();
+    };
+    $("clear").onclick = () => {
+      draft.clips = [];
+      draftChanged();
+    };
+    for (const key of ["audio", "boxes"]) {
+      $(key).onchange = () => {
+        draft[key] = $(key).checked;
+        draftChanged();
+      };
+    }
+    $("preview-edit").onclick = () => {
+      if (editPlayback) {
+        editPlayback = null;
+        video.pause();
+        $("preview-edit").textContent = "▶ Preview selection";
+      } else startEditPreview(structuredClone(draft.clips));
+    };
+    $("export").onclick = async () => {
+      try {
+        const id = selected, payload = structuredClone(draft);
+        await saveChain;
+        await post(endpoint("export", id), payload);
+        notice(
+          "Rendering your highlights video. You can download it below when it is ready.",
+        );
+        await refresh();
+      } catch (e) {
+        notice(e.message, true);
+      }
+    };
+    $("choose").onclick = () => $("upload").click();
+    async function upload(list) {
+      if (uploading || !project || project.busy) return;
+      const id = selected, projectName = project.name;
+      uploading = true;
+      updateControls();
+      let count = 0;
+      const errors = [];
+      try {
+        for (
+          const file of [...list].sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { numeric: true })
+          )
+        ) {
+          notice(`Uploading ${file.name} to ${projectName}…`);
+          try {
+            await api(
+              endpoint("upload", id) + "?name=" + encodeURIComponent(file.name),
+              { method: "POST", body: file },
+            );
+            count++;
+          } catch (e) {
+            errors.push(`${file.name}: ${e.message}`);
+          }
+        }
+        notice(
+          `Added ${count} files to ${projectName}. Click Analyze all files to build the timeline.${
+            errors.length ? " " + errors.join(" · ") : ""
+          }`,
+          !!errors.length,
+        );
+      } finally {
+        uploading = false;
+        $("upload").value = "";
+        await refresh();
+      }
+    }
+    $("upload").onchange = (e) => upload(Array.from(e.target.files));
+    $("drop").ondragover = (e) => {
+      e.preventDefault();
+      $("drop").classList.add("drag");
+    };
+    $("drop").ondragleave = () => $("drop").classList.remove("drag");
+    $("drop").ondrop = (e) => {
+      e.preventDefault();
+      $("drop").classList.remove("drag");
+      void upload(Array.from(e.dataTransfer.files));
+    };
+    refresh();
+    </script>
+  </body>
+</html>

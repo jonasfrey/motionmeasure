@@ -1,0 +1,22 @@
+# Private by default: only reviewed source files are eligible for Git.
+# Add new source files explicitly here after checking their contents.
+/*
+!/.gitignore
+!/.env.example
+!/README.md
+!/deno.json
+!/requirements.txt
+!/server.ts
+!/index.html
+!/analysis_frames.py
+!/benchmark_analysis.py
+!/detect_motion.py
+!/process_video.py
+!/project_worker.py
+!/tests/
+/tests/*
+!/tests/browser_projects.ts
+!/tests/integration_projects.py
+!/tests/test_benchmark.py
+!/tests/test_motion.py
+!/tests/test_projects.py

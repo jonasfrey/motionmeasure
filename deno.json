@@ -1,0 +1,5 @@
+{
+  "tasks": {
+    "start": "deno run -A --env-file=.env server.ts"
+  }
+}
