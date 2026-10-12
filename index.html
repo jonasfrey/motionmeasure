@@ -261,6 +261,64 @@
       border-left: 1px dashed #849997;
       pointer-events: none;
     }
+    .calendar-panel {
+      margin-top: 18px;
+    }
+    .calendar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7,minmax(0,1fr));
+      gap: 5px;
+      margin-top: 8px;
+    }
+    .calendar-grid > span {
+      text-align: center;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .calendar-grid button {
+      min-width: 0;
+      padding: 6px 3px;
+      text-align: center;
+    }
+    .calendar-grid button[aria-pressed=true] {
+      border-color: var(--accent);
+      background: #30402a;
+    }
+    .calendar-grid small {
+      display: block;
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .calendar-grid .has-motion {
+      box-shadow: inset 0 -3px var(--accent);
+    }
+    .recording {
+      position: absolute;
+      height: 100%;
+      background: #54645c;
+      pointer-events: none;
+    }
+    input[type=datetime-local] {
+      width: 100%;
+      min-width: 0;
+      background: #20292d;
+      color: white;
+      border: 1px solid var(--line);
+      padding: 5px;
+    }
+    .recording-date {
+      margin-top: 6px;
+      font-size: 10px;
+    }
+    #source-label {
+      overflow-wrap: anywhere;
+    }
     .scale {
       display: flex;
       justify-content: space-between;
@@ -585,10 +643,21 @@
             id="placeholder"><b>One project. One continuous timeline.</b><span>Create a project and add videos to begin.</span></div>
           <video id="video" controls preload="metadata" hidden></video>
         </div>
+        <p class="note"
+          id="source-label">Playback uses original footage and audio.</p>
+        <section class="calendar-panel" id="calendar-panel"
+          aria-label="Recording calendar" hidden>
+          <div
+            class="calendar-head"><button id="previous-month" aria-label="Previous month">←</button><strong id="calendar-month"></strong><button id="next-month" aria-label="Next month">→</button></div>
+          <div class="calendar-grid" id="calendar"></div>
+          <div class="actions"
+            style="margin-top:10px"><button id="all-days" class="tiny">All footage</button><span id="calendar-note" class="note"></span></div>
+        </section>
+        <p class="note" id="day-label">Project timeline</p>
         <div class="track" id="timeline"
           aria-label="Project motion timeline"></div>
         <div
-          class="scale"><span id="current-time">00:00:00</span><span id="duration">00:00:00</span></div>
+          class="scale"><span id="range-start">00:00:00</span><span id="current-time">00:00:00</span><span id="duration">00:00:00</span></div>
         <div
           class="stats"><span><strong id="count">—</strong>detections</span><span><strong id="motion">—</strong>with motion</span><span><strong id="length">—</strong>project duration</span></div>
         <div class="sectionhead">
@@ -600,6 +669,7 @@
           <p
             class="note">Detections from all project files will appear here.</p>
         </div>
+        <button id="more-events" hidden>Show more detections</button>
         <section class="edit" aria-label="Highlights editor">
           <div
             class="sectionhead"><h3>Your highlights video</h3><button id="clear" class="tiny" disabled>Clear selection</button></div>
@@ -618,16 +688,16 @@
           <summary>Detection settings</summary>
           <div class="settings">
             <label>Analyze every Nth frame of first video<input data-key="step" type="number" min="1" max="120" step="1" value="5"></label>
-            <label>Analysis width (pixels)<input data-key="width" type="number" min="32" max="3840" step="1" value="960"></label>
-            <label>Analysis samples/sec (0 = use Nth frame)<input data-key="samples-per-second" type="number" min="0" max="120" step="0.1" value="0"></label>
-            <label>Minimum motion area (at default width)<input data-key="min-area" type="number" min="1" max="1000000" value="800"></label>
+            <label>Analysis width (pixels)<input data-key="width" type="number" min="32" max="256" step="1" value="256"></label>
+            <label>Analysis samples/sec (0 = use Nth frame)<input data-key="samples-per-second" type="number" min="0" max="120" step="0.1" value="2"></label>
+            <label>Minimum motion area (at 960px reference)<input data-key="min-area" type="number" min="1" max="1000000" value="800"></label>
             <label>Minimum event duration (seconds)<input data-key="min-duration" type="number" min="0" max="3600" step="0.1" value="1"></label>
             <label>Merge quiet gaps (seconds)<input data-key="gap" type="number" min="0" max="60" step="0.1" value="1.5"></label>
             <label>Threshold (lower = more sensitive)<input data-key="threshold" type="number" min="1" max="255" value="24"></label>
             <label>Minimum motion samples at Nth-frame rate<input data-key="min-frames" type="number" min="1" max="10000" value="4"></label>
           </div>
           <p
-            class="note">Area thresholds adjust automatically with analysis width. An explicit samples/sec rate preserves the minimum positive-motion time and warm-up time implied by the Nth-frame settings, rounded up to whole samples. Lower rates can miss brief motion. The same background model continues across all files. Best for stationary cameras and constant-frame-rate footage. Review previews are silent and downscaled; clean exports use original footage with audio, at up to 1080p / 30 fps. Successful reanalysis resets the selection; previous exports are kept.</p>
+            class="note">Analysis copies are cached at up to 256 pixels wide and 2 samples/sec by default. GPU decoding and scaling are used when available, with automatic CPU fallback. Area thresholds adjust automatically with analysis width. An explicit samples/sec rate preserves the minimum positive-motion time and warm-up time implied by the Nth-frame settings, rounded up to whole samples. Lower rates can miss brief motion. The background model continues across adjoining files and resets at known recording gaps. Best for stationary cameras and constant-frame-rate footage. Playback uses the original video resolution and audio; clean exports use original footage with audio, at up to 1080p / 30 fps. Successful reanalysis resets the selection; previous exports are kept.</p>
         </details>
       </main>
     </div>
@@ -635,6 +705,7 @@
       <form
         id="project-form"><h2>Create a project</h2><p class="note">Give this collection of videos a name.</p><label>Project name<input id="project-name" type="text" maxlength="100" required placeholder="e.g. Garden camera · September 25"></label><div class="actions"><button type="button" id="cancel-project">Cancel</button><button class="primary" type="submit">Create project</button></div></form>
     </dialog>
+    <script src="/timeline.js"></script>
     <script>
     const $ = (id) => document.getElementById(id), video = $("video");
     const escape = (s) =>
@@ -666,7 +737,14 @@
       uploading = false,
       saveChain = Promise.resolve(),
       saveVersion = 0,
-      editPlayback = null;
+      editPlayback = null,
+      playbackSource = null,
+      seekToken = 0,
+      seekingTarget = null,
+      calendarData = { days: [], undated: [] },
+      selectedDay = null,
+      calendarMonth = null,
+      visibleLimit = 100;
     function notice(message, error = false) {
       $("notice").hidden = false;
       $("notice").classList.toggle("error", error);
@@ -716,15 +794,52 @@
         el.append(p);
       }
     }
+    const projectTime = () =>
+      playbackSource ? playbackSource.start + video.currentTime : 0;
+    function seekProject(t, play = true) {
+      const sources = project?.result?.sources || [];
+      const source = MotionTimeline.sourceAt(sources, t);
+      if (!source) return;
+      const token = ++seekToken;
+      const local = Math.min(
+        Math.max(0, t - source.start),
+        Math.max(0, source.duration - .001),
+      );
+      seekingTarget = t;
+      const start = () => {
+        if (token !== seekToken) return;
+        const seekNeeded = Math.abs(video.currentTime - local) > .001;
+        video.currentTime = local;
+        if (!seekNeeded) seekingTarget = null;
+        if (play) {
+          video.play().catch((e) => {
+            if (token === seekToken && e.name !== "AbortError") {
+              notice("Playback could not start: " + e.message, true);
+            }
+          });
+        }
+      };
+      if (playbackSource?.id !== source.id) {
+        video.pause();
+        playbackSource = source;
+        video.onloadedmetadata = start;
+        video.src = `/media/${selected}/sources/${source.id}`;
+        $("source-label").replaceChildren();
+        $("source-label").append(
+          `${source.name} · Original ${source.width} × ${source.height} · `,
+        );
+        const link = document.createElement("a");
+        link.href = video.getAttribute("src") + "?download";
+        link.textContent = "Download original";
+        link.download = source.name;
+        $("source-label").append(link);
+      } else if (video.readyState >= 1) start();
+      else video.onloadedmetadata = start;
+    }
     function playAt(t) {
       editPlayback = null;
       $("preview-edit").textContent = "▶ Preview selection";
-      video.currentTime = t;
-      video.play().catch((e) => {
-        if (e.name !== "AbortError") {
-          notice("Playback could not start: " + e.message, true);
-        }
-      });
+      seekProject(t);
     }
     function draftChanged() {
       editPlayback = null;
@@ -775,7 +890,7 @@
       $("export").disabled = !enabled || !draft?.clips.length;
       $("preview-edit").disabled = !enabled || !draft?.clips.length;
       $("audio").disabled = !enabled;
-      $("boxes").disabled = !enabled;
+      $("boxes").disabled = !enabled || project.result?.preview_available === false;
       $("clips").querySelectorAll("input,button").forEach((el) =>
         el.disabled = !enabled
       );
@@ -849,6 +964,202 @@
         : "No clips selected";
       updateControls();
     }
+    function renderCalendar() {
+      $("calendar-panel").hidden = false;
+      const days = calendarData.days;
+      const grid = $("calendar");
+      grid.replaceChildren();
+      $("calendar-note").textContent = calendarData.undated.length
+        ? `${calendarData.undated.length} files have no recording date; available in All footage. Set dates in Playback order.`
+        : "Local recording dates · green = motion · gray = recorded footage";
+      $("previous-month").disabled = !days.length ||
+        calendarMonth <= days[0].key.slice(0, 7);
+      $("next-month").disabled = !days.length ||
+        calendarMonth >= days.at(-1).key.slice(0, 7);
+      if (!days.length) {
+        $("calendar-month").textContent = "Recording dates unavailable";
+        return;
+      }
+      const first = new Date(calendarMonth + "-01T12:00:00");
+      $("calendar-month").textContent = first.toLocaleDateString(undefined, {
+        month: "long",
+        year: "numeric",
+      });
+      for (const name of ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]) {
+        const span = document.createElement("span");
+        span.textContent = name;
+        grid.append(span);
+      }
+      for (let i = 0; i < (first.getDay() + 6) % 7; i++) {
+        grid.append(document.createElement("span"));
+      }
+      const count = new Date(first.getFullYear(), first.getMonth() + 1, 0)
+        .getDate();
+      const byKey = new Map(days.map((d) => [d.key, d]));
+      for (let n = 1; n <= count; n++) {
+        const key = `${calendarMonth}-${String(n).padStart(2, "0")}`;
+        const day = byKey.get(key);
+        const events = new Set(day?.motion.map((m) => m.event.id) || []).size;
+        const button = document.createElement("button");
+        button.disabled = !day;
+        button.dataset.day = key;
+        button.classList.toggle("has-motion", events > 0);
+        button.setAttribute("aria-pressed", String(selectedDay === key));
+        button.setAttribute(
+          "aria-label",
+          `${key}: ${day ? events + " detections" : "no footage"}`,
+        );
+        button.innerHTML = `${n}<small>${day ? events + " motion" : "—"}</small>`;
+        button.onclick = () => {
+          selectedDay = key;
+          visibleLimit = 100;
+          renderCalendar();
+          renderTimeline();
+        };
+        grid.append(button);
+      }
+    }
+    function renderTimeline() {
+      const ev = project.result;
+      const day = calendarData.days.find((d) => d.key === selectedDay);
+      const track = $("timeline");
+      track.replaceChildren();
+      $("day-label").textContent = day
+        ? new Date(day.start).toLocaleDateString(undefined, {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }) + " · click motion to play the original"
+        : "All footage · continuous project time";
+      $("range-start").textContent = "00:00:00";
+      $("duration").textContent = day ? "24:00:00" : clock(ev.duration);
+      const minimum = day ? day.start : 0,
+        span = day ? day.end - day.start : ev.duration;
+      const position = (node, start, end) => {
+        node.style.left = (start - minimum) / span * 100 + "%";
+        node.style.width = (end - start) / span * 100 + "%";
+      };
+      if (day) {
+        for (const r of day.recordings) {
+          const band = document.createElement("span");
+          band.className = "recording";
+          position(band, r.start, r.end);
+          track.append(band);
+        }
+      }
+      const motions = day ? day.motion : ev.segments.map((event) => ({
+        start: event.start,
+        end: event.end,
+        projectStart: event.start,
+        event,
+      }));
+      for (const m of motions) {
+        const marker = document.createElement("button");
+        marker.dataset.id = m.event.id;
+        position(marker, m.start, m.end);
+        marker.title = `${m.event.id} · ${
+          day ? new Date(m.start).toLocaleTimeString() : clock(m.start)
+        }`;
+        marker.setAttribute("aria-label", marker.title);
+        marker.onclick = (e) => {
+          e.stopPropagation();
+          playAt(m.projectStart);
+        };
+        track.append(marker);
+      }
+      if (!day) {
+        for (const source of ev.sources.slice(1)) {
+          const b = document.createElement("span");
+          b.className = "boundary";
+          b.style.left = source.start / ev.duration * 100 + "%";
+          track.append(b);
+        }
+      }
+      const cursor = document.createElement("i");
+      cursor.id = "cursor";
+      track.append(cursor);
+      track.onclick = (e) => {
+        const rect = track.getBoundingClientRect();
+        const instant = minimum +
+          Math.min(.999999, Math.max(0, (e.clientX - rect.left) / rect.width)) *
+            span;
+        const time = day ? MotionTimeline.projectAt(day, instant) : instant;
+        if (time !== null) playAt(time);
+      };
+      const eventMap = new Map();
+      for (const m of motions) {
+        if (!eventMap.has(m.event.id)) eventMap.set(m.event.id, m);
+      }
+      const shown = [...eventMap.values()];
+      $("events").replaceChildren();
+      for (const m of shown.slice(0, visibleLimit)) {
+        const event = m.event;
+        const row = document.createElement("div");
+        row.className = "event";
+        row.dataset.id = event.id;
+        row.dataset.start = event.start;
+        row.dataset.end = event.end;
+        const label = day
+          ? new Date(m.start).toLocaleTimeString()
+          : clock(event.start) + " → " + clock(event.end);
+        row.innerHTML = `<button class="play"><img src="${
+          media("runs", project.analysis.id, event.thumb)
+        }" alt="Motion thumbnail" loading="lazy"><span><strong>${
+          escape(label)
+        }</strong><small>${duration(event.duration)}${
+          event.source_ids.length > 1 ? " · spans files" : ""
+        }</small></span></button><input type="checkbox" aria-label="Add ${
+          escape(event.id)
+        } to highlights">`;
+        row.querySelector(".play").onclick = () => playAt(m.projectStart);
+        row.querySelector("input").onchange = (e) => {
+          if (e.target.checked) {
+            if (draft.clips.length >= 1000) {
+              notice("Export up to 1000 clips at a time.");
+              syncChecks();
+              return;
+            }
+            draft.clips.push({
+              segment_id: event.id,
+              start: event.start,
+              end: event.end,
+            });
+          } else draft.clips = draft.clips.filter((c) => c.segment_id !== event.id);
+          draftChanged();
+        };
+        $("events").append(row);
+      }
+      if (!shown.length) {
+        $("events").innerHTML =
+          '<p class="note">No motion met the current settings in this view.</p>';
+      }
+      $("more-events").hidden = shown.length <= visibleLimit;
+      $("more-events").textContent = `Show more detections (${
+        Math.min(visibleLimit, shown.length)
+      } of ${shown.length})`;
+      $("select-all").textContent = day ? "Add this day" : "Add all";
+      syncChecks();
+    }
+    for (const [id, delta] of [["previous-month", -1], ["next-month", 1]]) {
+      $(id).onclick = () => {
+        const date = new Date(calendarMonth + "-01T12:00:00");
+        date.setMonth(date.getMonth() + delta);
+        calendarMonth = MotionTimeline.dayKey(date).slice(0, 7);
+        renderCalendar();
+      };
+    }
+    $("all-days").onclick = () => {
+      selectedDay = null;
+      visibleLimit = 100;
+      renderCalendar();
+      renderTimeline();
+    };
+    $("more-events").onclick = () => {
+      visibleLimit += 100;
+      renderTimeline();
+    };
+
     function render() {
       if (!project) return;
       const p = project, ev = p.result;
@@ -879,6 +1190,48 @@
           }>↑</button><button class="down" title="Move file later" ${
             i === p.files.length - 1 || p.busy || uploading ? "disabled" : ""
           }>↓</button></div>`;
+          const dates = document.createElement("details");
+          dates.className = "recording-date";
+          const recorded = f.recording_start || source?.recording_start;
+          const parsed = recorded ? new Date(recorded) : null;
+          const localValue = parsed && Number.isFinite(+parsed)
+            ? `${MotionTimeline.dayKey(parsed)}T${
+              String(parsed.getHours()).padStart(2, "0")
+            }:${String(parsed.getMinutes()).padStart(2, "0")}:${
+              String(parsed.getSeconds()).padStart(2, "0")
+            }`
+            : "";
+          dates.innerHTML = `<summary>Recording date · ${
+            escape(
+              f.recording_start ? "manual" : source?.recording_date_basis || "auto",
+            )
+          }</summary><label>Start (local time)<input type="datetime-local" step="1" value="${localValue}" ${
+            p.busy || uploading ? "disabled" : ""
+          }></label><button class="save-date" ${
+            p.busy || uploading ? "disabled" : ""
+          }>Save date</button> <button class="auto-date" ${
+            p.busy || uploading ? "disabled" : ""
+          }>Use auto date</button>`;
+          const saveDate = async (value) => {
+            try {
+              await post(endpoint("recording"), {
+                id: f.id,
+                recording_start: value,
+              });
+              notice(
+                "Recording date saved. Analyze again to update the calendar; cached analysis copies will be reused.",
+              );
+              await refresh();
+            } catch (e) {
+              notice(e.message, true);
+            }
+          };
+          dates.querySelector(".save-date").onclick = () => {
+            const input = dates.querySelector("input");
+            if (input.value && input.reportValidity()) void saveDate(input.value);
+          };
+          dates.querySelector(".auto-date").onclick = () => void saveDate(null);
+          row.firstElementChild.append(dates);
           row.querySelector(".up").onclick = () => moveFile(i, -1);
           row.querySelector(".down").onclick = () => moveFile(i, 1);
           $("files").append(row);
@@ -893,6 +1246,10 @@
         resultKey = key;
         editPlayback = null;
         video.pause();
+        playbackSource = null;
+        seekingTarget = null;
+        seekToken++;
+        video.onloadedmetadata = null;
         video.removeAttribute("src");
         video.load();
         video.hidden = !ev;
@@ -906,7 +1263,7 @@
         draft = p.draft ? structuredClone(p.draft) : null;
         $("save-state").textContent = "";
         if (ev) {
-          video.src = media("runs", p.analysis.id, "preview.mp4");
+          seekProject(0, false);
           $("download").href = media("runs", p.analysis.id, "events.json") +
             "?download";
           $("download").download = p.name + ".json";
@@ -914,54 +1271,22 @@
           $("motion").textContent = duration(ev.total_motion_s);
           $("length").textContent = duration(ev.duration);
           $("duration").textContent = clock(ev.duration);
-          ev.segments.forEach((s) => {
-            const marker = document.createElement("button");
-            marker.dataset.id = s.id;
-            marker.style.left = s.start / ev.duration * 100 + "%";
-            marker.style.width =
-              Math.max(s.duration, ev.sample_interval) / ev.duration * 100 + "%";
-            marker.title = `${s.id} · ${clock(s.start)}`;
-            marker.setAttribute("aria-label", marker.title);
-            marker.onclick = () => playAt(s.start);
-            $("timeline").append(marker);
-            const row = document.createElement("div");
-            row.className = "event";
-            row.dataset.id = s.id;
-            row.dataset.start = s.start;
-            row.dataset.end = s.end;
-            row.innerHTML = `<button class="play"><img src="${
-              media("runs", p.analysis.id, s.thumb)
-            }" alt="Motion thumbnail" loading="lazy"><span><strong>${
-              clock(s.start)
-            } → ${clock(s.end)}</strong><small>${duration(s.duration)}${
-              s.source_ids.length > 1 ? " · spans files" : ""
-            }</small></span></button><input type="checkbox" aria-label="Add ${
-              escape(s.id)
-            } to highlights">`;
-            row.querySelector(".play").onclick = () => playAt(s.start);
-            row.querySelector("input").onchange = (e) => {
-              if (e.target.checked) {
-                draft.clips.push({ segment_id: s.id, start: s.start, end: s.end });
-              } else draft.clips = draft.clips.filter((c) => c.segment_id !== s.id);
-              draftChanged();
-            };
-            $("events").append(row);
-          });
-          for (const source of ev.sources.slice(1)) {
-            const b = document.createElement("span");
-            b.className = "boundary";
-            b.style.left = source.start / ev.duration * 100 + "%";
-            $("timeline").append(b);
-          }
-          const cursor = document.createElement("i");
-          cursor.id = "cursor";
-          $("timeline").append(cursor);
-          if (!ev.segments.length) {
-            $("events").innerHTML =
-              '<p class="note">No motion met the current settings. Try a smaller minimum area or duration.</p>';
-          }
-        } else {$("events").innerHTML =
-            '<p class="note">Add videos and click Analyze all files to find detections.</p>';}
+          calendarData = MotionTimeline.calendar(ev.sources, ev.segments);
+          selectedDay = calendarData.days[0]?.key || null;
+          calendarMonth = selectedDay?.slice(0, 7) || null;
+          visibleLimit = 100;
+          renderCalendar();
+          renderTimeline();
+        } else {
+          $("calendar-panel").hidden = true;
+          $("more-events").hidden = true;
+          $("day-label").textContent = "Project timeline";
+          $("range-start").textContent = clock(0);
+          $("source-label").textContent =
+            "Playback uses original footage and audio.";
+          $("events").innerHTML =
+            '<p class="note">Add videos and click Analyze all files to find detections.</p>';
+        }
         renderDraft();
       }
       const ek = p.id + "|" + JSON.stringify(p.exports);
@@ -987,54 +1312,74 @@
       }
       updateControls();
     }
+    function stopEditPreview() {
+      editPlayback = null;
+      video.pause();
+      $("preview-edit").textContent = "▶ Preview selection";
+    }
     function startEditPreview(clips) {
       editPlayback = { clips, index: 0 };
-      video.currentTime = clips[0].start;
-      video.play().catch((e) => {
-        if (e.name !== "AbortError") notice(e.message, true);
-      });
+      seekProject(clips[0].start);
       $("preview-edit").textContent = "■ Stop preview";
     }
+    function advanceEditPreview() {
+      if (++editPlayback.index >= editPlayback.clips.length) stopEditPreview();
+      else seekProject(editPlayback.clips[editPlayback.index].start);
+    }
+    video.onseeked = () => {
+      seekingTarget = null;
+    };
     video.ontimeupdate = () => {
       const ev = project?.result;
-      if (!ev) return;
-      $("current-time").textContent = clock(video.currentTime);
+      if (!ev || seekingTarget !== null || !playbackSource) return;
+      const t = projectTime();
+      $("current-time").textContent = clock(t) + " project";
+      const day = calendarData.days.find((d) => d.key === selectedDay);
+      let fraction = t / ev.duration;
+      if (day) {
+        const recorded = playbackSource.recording_start
+          ? Date.parse(playbackSource.recording_start)
+          : NaN;
+        fraction = (recorded + video.currentTime * 1000 - day.start) /
+          (day.end - day.start);
+        if (Number.isFinite(recorded)) {
+          $("current-time").textContent = new Date(
+            recorded + video.currentTime * 1000,
+          ).toLocaleTimeString();
+        }
+      }
       if ($("cursor")) {
-        $("cursor").style.left = video.currentTime / ev.duration * 100 + "%";
+        $("cursor").hidden = !Number.isFinite(fraction) || fraction < 0 ||
+          fraction > 1;
+        $("cursor").style.left = fraction * 100 + "%";
       }
       $("events").querySelectorAll(".event").forEach((b) =>
         b.classList.toggle(
           "active",
-          video.currentTime >= Number(b.dataset.start) &&
-            video.currentTime < Number(b.dataset.end),
+          t >= Number(b.dataset.start) && t < Number(b.dataset.end),
         )
       );
       if (
-        editPlayback &&
-        video.currentTime >= editPlayback.clips[editPlayback.index].end - .04
-      ) {
-        editPlayback.index++;
-        if (editPlayback.index >= editPlayback.clips.length) {
-          editPlayback = null;
-          video.pause();
-          $("preview-edit").textContent = "▶ Preview selection";
-        } else video.currentTime = editPlayback.clips[editPlayback.index].start;
-      }
+        editPlayback && !video.seeking &&
+        t >= editPlayback.clips[editPlayback.index].end - .04
+      ) advanceEditPreview();
     };
     video.onended = () => {
-      if (editPlayback) {
-        editPlayback.index++;
-        if (editPlayback.index < editPlayback.clips.length) {
-          video.currentTime = editPlayback.clips[editPlayback.index].start;
-          video.play().catch(() => {});
-        } else editPlayback = null;
-      }
-      if (!editPlayback) $("preview-edit").textContent = "▶ Preview selection";
+      if (seekingTarget !== null || !playbackSource) return;
+      if (
+        editPlayback &&
+        projectTime() >= editPlayback.clips[editPlayback.index].end - .04
+      ) {
+        advanceEditPreview();
+      } else if (playbackSource.end < project.result.duration - .001) {
+        seekProject(playbackSource.end);
+      } else stopEditPreview();
     };
     video.onerror = () => {
       if (video.getAttribute("src")) {
+        seekingTarget = null;
         notice(
-          "The preview could not be loaded. Try analyzing the project again.",
+          "This original video could not be played. Your browser may not support its codec; use Download original to open it in a video player.",
           true,
         );
       }
@@ -1138,8 +1483,15 @@
     };
     $("select-all").onclick = () => {
       const ids = new Set(draft.clips.map((c) => c.segment_id));
+      const day = calendarData.days.find((d) => d.key === selectedDay);
+      const included = day ? new Set(day.motion.map((m) => m.event.id)) : null;
       for (const s of project.result.segments) {
+        if (included && !included.has(s.id)) continue;
         if (!ids.has(s.id)) {
+          if (draft.clips.length >= 1000) {
+            notice("Added up to the 1000-clip export limit.");
+            break;
+          }
           draft.clips.push({ segment_id: s.id, start: s.start, end: s.end });
         }
       }

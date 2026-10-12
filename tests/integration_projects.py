@@ -56,12 +56,23 @@ try:
     assert len(a['files'])==2 and len(b['files'])==1
     assert a['files'][0]['id']!=b['files'][0]['id']
     assert 'path' not in a['files'][0]
+    source_url = f"/media/{first}/sources/{a['files'][0]['id']}"
+    response = request(source_url, headers={'Range':'bytes=0-99'})
+    assert response.status == 206 and response.read() == Path(paths[0]).read_bytes()[:100]
+    try:
+        request(f"/media/{second}/sources/{a['files'][0]['id']}")
+    except urllib.error.HTTPError as e:
+        assert e.code == 404
+    else:
+        raise AssertionError('Original video escaped its project')
     settings={'step':1,'min-area':80,'min-duration':.3,'min-frames':2,'gap':.2}
     fail(route+'/analyze', {'width': 0})
     fail(route+'/analyze', {'samples-per-second': -1})
     call(route+'/analyze',settings)
     fail(route+'/order',{'ids':[f['id'] for f in a['files']]})
     p=wait(first,'analysisStatus')
+    assert p['result']['decoder'] == 'proxy' and p['result']['out_size'] == [256,144]
+    assert not p['result']['preview_available']
     assert p['result']['segment_count']==2
     assert len(p['result']['segments'][0]['source_ids'])==2
     draft={'analysis_id':p['analysis']['id'],'clips':[{'segment_id':s['id'],'start':s['start'],'end':s['end']} for s in p['result']['segments']],'audio':True,'boxes':False}
@@ -86,6 +97,17 @@ try:
     assert p['result']['out_fps']==10
     assert p['result']['effective_min_area']==20
     assert p['draft']['clips']==[] and len(p['exports'])==1
+    fail(route+'/recording', {'id':p['files'][0]['id'], 'recording_start':'not a date'})
+    fail(route+'/recording', {'id':p['files'][0]['id'], 'recording_start':'2026-02-30T09:00:00'})
+    fail(route+'/recording', {'id':p['files'][0]['id'], 'recording_start':'2026-10-08T24:00:00'})
+    for i,f in enumerate(p['files']):
+        call(route+'/recording', {'id':f['id'], 'recording_start':f'2026-10-{8+i:02d}T09:00:00'})
+    assert call(route)['stale']
+    call(route+'/analyze', {**settings, 'width':160, 'samples-per-second':10})
+    p=wait(first,'analysisStatus')
+    assert all(proxy['cached'] for proxy in p['result']['proxies'])
+    assert p['result']['sources'][1]['recording_start'] == '2026-10-09T09:00:00'
+    assert all(len(event['source_ids']) == 1 for event in p['result']['segments'])
     Path('/tmp/motionmeasure-project-browser.json').write_text(json.dumps({'paths':paths,'first':first,'second':second}))
     print('PASS: isolated projects, uploads, continuous seam events, persistent selection, MP4 export, stale-analysis validation, reanalysis and retained exports')
 finally:

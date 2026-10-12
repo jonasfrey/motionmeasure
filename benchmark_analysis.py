@@ -14,6 +14,8 @@ from process_video import write_json
 
 CASES = {
     'baseline': {},
+    'proxy-256': {'decoder': 'proxy', 'preview': False, 'settings': {'width':256, 'samples-per-second':2}},
+    'proxy-256-cached': {'decoder': 'proxy', 'preview': False, 'settings': {'width':256, 'samples-per-second':2}},
     'no-preview': {'preview': False},
     'ffmpeg': {'preview': False, 'decoder': 'ffmpeg'},
     **{f'width-{w}': {'preview': False, 'settings': {'width': w}} for w in (640, 480, 320)},
@@ -102,6 +104,12 @@ def main():
     # Compare against the library's original thread default, even when the app
     # uses a tuned default. A request can explicitly pin another reference.
     base.setdefault('opencv_threads', cv2.getNumThreads())
+    # Current web snapshots request proxies. Establish the old pipeline as the
+    # reference explicitly so every width/rate comparison still means what it says.
+    base['decoder'] = 'opencv'
+    base['preview'] = True
+    base.setdefault('settings', {}).update({'width':960, 'samples-per-second':0})
+    base['proxy_cache'] = str(args.output.resolve()/'proxies')
     args.output.mkdir(parents=True, exist_ok=True)
     for name in args.cases:
         req = copy.deepcopy(base)

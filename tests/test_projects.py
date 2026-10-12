@@ -4,13 +4,14 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from project_worker import analyze, export_video, clip_parts, AnalysisProfile, opencv_frames, probe_sources
-from analysis_frames import ffmpeg_frames
+from project_worker import analyze, export_video, clip_parts, AnalysisProfile, opencv_frames, probe_sources, recording_date
+from analysis_frames import ffmpeg_frames, prepare_proxy, sample_indices, proxy_frames
 
 
 class ProjectTests(unittest.TestCase):
@@ -36,8 +37,8 @@ class ProjectTests(unittest.TestCase):
             command += ['-c:v','libx264','-pix_fmt','yuv420p',str(target)]
             subprocess.run(command,check=True)
             self.files.append(dict(id=f'source-{part}',name=target.name,path=str(target)))
-        self.request = dict(id='project',name='Test project',revision=1,run_id='test-analysis',files=self.files,
-                            settings={'step':1,'min-area':80,'min-duration':.3,'min-frames':2,'gap':.2})
+        self.request = dict(id='project',name='Test project',revision=1,run_id='test-analysis',files=self.files, decoder='opencv', preview=True,
+                            settings={'width':960,'samples-per-second':0,'step':1,'min-area':80,'min-duration':.3,'min-frames':2,'gap':.2})
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -170,6 +171,65 @@ class ProjectTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 analyze(request, self.root/'invalid')
             self.assertEqual(cv2.getNumThreads(), before)
+
+    def test_fast_defaults_cache_and_original_clock(self):
+        request = {k:v for k,v in self.request.items() if k not in ('decoder', 'preview', 'settings')}
+        request.update(proxy_cache=str(self.root/'cache'), acceleration='cpu')
+        first = analyze(request, self.root/'fast')
+        self.assertEqual(first['out_size'], [256, 144])
+        self.assertEqual(first['sample_interval'], .5)
+        self.assertFalse(first['preview_available'])
+        self.assertFalse((self.root/'fast/preview.mp4').exists())
+        self.assertEqual(first['sources'][0]['width'], 320)
+        self.assertEqual(len(first['proxies']), 2)
+        self.assertTrue(all(not p['cached'] for p in first['proxies']))
+        self.assertTrue(first['segments'])
+        for sample in json.loads((self.root/'fast/events.json').read_text())['samples']:
+            self.assertEqual(sample['source_frame'], int(sample['source_time']*15))
+        again = analyze(request, self.root/'cached')
+        self.assertTrue(all(p['cached'] for p in again['proxies']))
+        self.assertEqual(first['segments'], again['segments'])
+        profile = json.loads((self.root/'cached/profile.json').read_text())
+        self.assertEqual(profile['source_frames'], 0)
+        self.assertEqual(profile['analysis_samples'], 24)
+        request['settings'] = {'min-area':200}
+        tuned = analyze(request, self.root/'tuned')
+        self.assertTrue(all(p['cached'] for p in tuned['proxies']))
+        # Corrupt cache entries must be regenerated, not mistaken for a completed pass.
+        cached = next((self.root/'cache').glob('*.mp4'))
+        cached.write_bytes(b'broken')
+        repaired = analyze(request, self.root/'repaired')
+        self.assertEqual(sum(p['cached'] for p in repaired['proxies']), 1)
+
+    def test_proxy_mixed_clock_and_gpu_fallback(self):
+        source = probe_sources(self.files[:1])[0]
+        source.update(start=6.1, end=12.1)
+        # A missing hardware backend exercises the real probe/fallback path.
+        with patch('analysis_frames.hardware_backends', return_value=['vaapi:/dev/motionmeasure-missing']):
+            for rate in (2.7, 20):
+                proxy = prepare_proxy(source, 1/rate, 256, 144, self.root/'proxy-clock', lambda *args:None)
+                self.assertEqual(proxy['backend'], 'cpu')
+                frames = list(proxy_frames(source, 1/rate, proxy, AnalysisProfile()))
+                self.assertEqual([i for i,f in frames], list(sample_indices(source, 1/rate)))
+                self.assertTrue(all(f.shape == (144,256,3) for i,f in frames))
+        # A source shorter than the interval can contain no sample at this phase.
+        source.update(start=6.1, end=6.2)
+        proxy = prepare_proxy(source, 1, 256, 144, self.root/'empty', lambda *args:None)
+        self.assertEqual(list(proxy_frames(source, 1, proxy, AnalysisProfile())), [])
+
+    def test_recording_dates_and_overnight_motion_separation(self):
+        file = dict(self.files[0], name='camera_20261008_123456.mp4')
+        self.assertEqual(recording_date(file), ('2026-10-08T12:34:56','filename'))
+        file['recording_start'] = '2026-10-09T10:00:00'
+        self.assertEqual(recording_date(file), (file['recording_start'],'manual'))
+        self.files[0]['recording_start'] = '2026-10-08T09:00:00'
+        self.files[1]['recording_start'] = '2026-10-09T09:00:00'
+        result = analyze(self.request, self.root/'overnight')
+        self.assertTrue(all(len(s['source_ids']) == 1 for s in result['segments']))
+        self.assertEqual(result['sources'][1]['recording_start'], '2026-10-09T09:00:00')
+        self.files[0].pop('recording_start')
+        self.files[1].pop('recording_start')
+        self.assertEqual(recording_date(self.files[0]), (None, 'unknown'))
 
 
 if __name__ == '__main__':

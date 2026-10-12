@@ -102,8 +102,28 @@ await until(
   "draft.clips.length===2 && draft.clips[0].segment_id==='event-2' && $('save-state').textContent==='Saved'",
 );
 await evaluate("$('preview-edit').click()");
-await until("video.currentTime>9 && !video.paused");
-await evaluate("$('preview-edit').click(); $('export').click()");
+await until("projectTime()>9 && !video.paused");
+if (
+  !await evaluate(
+    "video.videoWidth===320 && video.src.includes('/sources/') && project.result.out_size[0]===256",
+  )
+) {
+  throw Error(
+    "Playback must use original resolution, separate from analysis copies",
+  );
+}
+await evaluate("stopEditPreview(); startEditPreview([{start:5,end:7}])");
+await until(
+  "playbackSource.id===project.result.sources[1].id && projectTime()>6 && !video.paused",
+);
+await until(
+  "!editPlayback && video.paused && projectTime()>=6.9 && projectTime()<7.3",
+);
+await evaluate("playAt(10); playAt(1); playAt(10.4)");
+await until(
+  "playbackSource.id===project.result.sources[1].id && projectTime()>=10.4 && !video.paused",
+);
+await evaluate("stopEditPreview(); $('export').click()");
 await until(
   "project.exports.length===1 && !project.busy && !!$('export-result').querySelector('a')",
 );
@@ -127,6 +147,48 @@ if (
     "draft.clips[0].segment_id==='event-2' && draft.clips[1].start===5 && draft.clips[1].end===7",
   )
 ) throw Error("Saved edit was not restored");
+// Correct dates through the file controls, then verify day filtering and original seeks.
+for (let i = 0; i < 2; i++) {
+  await evaluate(`(() => {
+    const row = document.querySelectorAll('.recording-date')[${i}];
+    row.querySelector('input').value='2026-10-${
+    String(8 + i).padStart(2, "0")
+  }T09:00:00';
+    row.querySelector('.save-date').click();
+  })()`);
+  await until(
+    `project.files[${i}].recording_start?.startsWith('2026-10-${
+      String(8 + i).padStart(2, "0")
+    }T09:00')`,
+  );
+}
+await evaluate(
+  "for(const [key,value] of Object.entries({'step':1,'min-area':80,'min-duration':.3,'min-frames':2,'gap':.2}))document.querySelector(`[data-key='${key}']`).value=value; $('analyze').click()",
+);
+await until("!project.busy && !project.stale && calendarData.days.length===2");
+if (
+  !await evaluate(
+    "project.result.proxies.every(p => p.cached) && document.querySelectorAll('#calendar button:not(:disabled)').length===2",
+  )
+) {
+  throw Error(
+    "Date corrections should reuse analysis copies and produce two calendar days",
+  );
+}
+await evaluate(
+  "document.querySelector('[data-day=\"2026-10-09\"]').click(); document.querySelector('#timeline button').click()",
+);
+await until(
+  "selectedDay==='2026-10-09' && playbackSource.id===project.result.sources[1].id && !video.paused",
+);
+if (
+  !await evaluate(
+    "video.videoWidth===320 && $('duration').textContent==='24:00:00' && $('day-label').textContent.includes('2026')",
+  )
+) {
+  throw Error("Day timeline must retain full-quality original playback");
+}
+await evaluate("stopEditPreview()");
 await evaluate("$('notice').hidden=true");
 const shot = await send("Page.captureScreenshot", {
   format: "png",
@@ -147,6 +209,6 @@ if (!await evaluate("document.documentElement.scrollWidth<=innerWidth")) {
 }
 if (errors.length) throw Error(errors.join("\n"));
 console.log(
-  "PASS: browser project creation, multi-upload, continuous analysis, selection, trim, reorder, preview, MP4 export, reload persistence and mobile layout",
+  "PASS: browser project creation, multi-upload, continuous analysis, selection, trim, reorder, preview, MP4 export, reload persistence, original-resolution cross-file playback, calendar correction/cache reuse and mobile layout",
 );
 ws.close();

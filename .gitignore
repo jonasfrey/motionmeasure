@@ -9,6 +9,7 @@
 !/server.ts
 !/index.html
 !/analysis_frames.py
+!/timeline.js
 !/benchmark_analysis.py
 !/detect_motion.py
 !/process_video.py
@@ -20,3 +21,4 @@
 !/tests/test_benchmark.py
 !/tests/test_motion.py
 !/tests/test_projects.py
+!/tests/timeline_test.ts

@@ -21,6 +21,7 @@ interface Source {
   name: string;
   path: string;
   size: number;
+  recording_start?: string | null;
 }
 interface Clip {
   segment_id: string;
@@ -99,7 +100,7 @@ function settings(body: Record<string, unknown>) {
   for (
     const [key, min, max, integer] of [
       ["step", 1, 120, true],
-      ["width", 32, 3840, true],
+      ["width", 32, 256, true],
       ["samples-per-second", 0, 120, false],
       ["min-area", 1, 1000000, false],
       ["min-duration", 0, 3600, false],
@@ -161,6 +162,11 @@ async function validateDraft(p: Project, body: Draft): Promise<Draft> {
     dir(p.id) + `runs/${p.analysis.id}/summary.json`,
   );
   const ids = new Set(summary.segments.map((s: { id: string }) => s.id));
+  if (body.boxes === true && summary.preview_available === false) {
+    throw Error(
+      "Motion boxes are unavailable for this analysis. Export original footage instead.",
+    );
+  }
   if (!Array.isArray(body.clips) || body.clips.length > 1000) {
     throw Error("Select at most 1000 clips.");
   }
@@ -389,7 +395,7 @@ async function handler(req: Request): Promise<Response> {
       return json({ projects });
     }
     const match =
-      /^\/api\/projects\/([^/]+)(?:\/(upload|order|analyze|draft|export))?$/
+      /^\/api\/projects\/([^/]+)(?:\/(upload|order|recording|analyze|draft|export))?$/
         .exec(url.pathname);
     if (match) {
       const [, id, action] = match;
@@ -463,6 +469,38 @@ async function handler(req: Request): Promise<Response> {
           }
           return json({ ok: true });
         }
+        if (action === "recording") {
+          const body = await req.json();
+          const file = p.files.find((f) => f.id === body.id);
+          if (!file) throw Error("Source not found");
+          const value = body.recording_start;
+          if (
+            value !== null && (typeof value !== "string" ||
+              !/^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d+)?)?(?:Z|[+-]\d\d:\d\d)?$/
+                .test(value) ||
+              !Number.isFinite(Date.parse(value)))
+          ) {
+            throw Error("Choose a valid recording date and time.");
+          }
+          if (value !== null) {
+            const [year, month, day, hour, minute, second = 0] = value.slice(
+              0,
+              19,
+            ).split(/\D/).map(Number);
+            const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+            if (
+              year < 1970 || month < 1 || month > 12 || day < 1 ||
+              day > daysInMonth ||
+              hour > 23 || minute > 59 || second > 59
+            ) {
+              throw Error("Choose a valid recording date and time.");
+            }
+          }
+          file.recording_start = value;
+          p.revision++;
+          await save(p);
+          return json({ ok: true });
+        }
         if (action === "draft") {
           p.draft = await validateDraft(p, await req.json());
           await save(p);
@@ -483,6 +521,9 @@ async function handler(req: Request): Promise<Response> {
               run_id: jobId,
               files: p.files,
               settings: settings(body),
+              decoder: "proxy",
+              preview: false,
+              proxy_cache: dir(id) + "proxies",
             };
             p.analysisJob = jobId;
           } else {
@@ -519,6 +560,31 @@ async function handler(req: Request): Promise<Response> {
         }
         return json({ error: "Not found" }, 404);
       });
+    }
+    if (url.pathname === "/timeline.js" && req.method === "GET") {
+      return serveFile(ROOT + "timeline.js", req, "text/javascript");
+    }
+    const original = /^\/media\/([^/]+)\/sources\/([^/]+)$/.exec(url.pathname);
+    if (original && ["GET", "HEAD"].includes(req.method)) {
+      const [, projectId, sourceId] = original;
+      const p = await load(projectId);
+      const source = p.files.find((f) => f.id === sourceId);
+      if (!source) return json({ error: "Not found" }, 404);
+      const ext = source.name.split(".").pop()!.toLowerCase();
+      const types: Record<string, string> = {
+        mp4: "video/mp4",
+        m4v: "video/mp4",
+        mov: "video/quicktime",
+        webm: "video/webm",
+        mkv: "video/x-matroska",
+        avi: "video/x-msvideo",
+      };
+      return serveFile(
+        source.path,
+        req,
+        types[ext] || "application/octet-stream",
+        url.searchParams.has("download"),
+      );
     }
     const media = /^\/media\/([^/]+)\/(runs|exports)\/([^/]+)\/([^/]+)$/.exec(
       url.pathname,

@@ -10,13 +10,15 @@ import tempfile
 import uuid
 import time
 import resource
+import re
+from datetime import datetime
 from collections import defaultdict
 from contextlib import contextmanager
 
 import cv2
 import numpy as np
 from process_video import write_json
-from analysis_frames import ffmpeg_frames
+from analysis_frames import ffmpeg_frames, prepare_proxy, proxy_frames
 
 
 class AnalysisProfile:
@@ -61,6 +63,34 @@ class AnalysisProfile:
                          'pipe writes include backpressure. CPU includes reaped child processes; 100% is one core.')
 
 
+def recording_date(file):
+    if file.get('recording_start'):
+        return file['recording_start'], 'manual'
+    # Only full dates AND times: a date alone does not establish a start time.
+    match = re.search(r'(?<!\d)(20\d{2})[-_]?([01]\d)[-_]?([0-3]\d)[T _-]?'
+                      r'([0-2]\d)[:_-]?([0-5]\d)[:_-]?([0-5]\d)(?!\d)', file['name'])
+    if match:
+        try:
+            return datetime(*map(int, match.groups())).isoformat(), 'filename'
+        except ValueError:
+            pass
+    metadata = subprocess.run(['ffprobe', '-v', 'error', '-show_entries',
+                               'format_tags=creation_time:stream_tags=creation_time',
+                               '-of', 'json', file['path']], capture_output=True, text=True)
+    if metadata.returncode == 0:
+        data = json.loads(metadata.stdout)
+        for item in [data.get('format', {}), *data.get('streams', [])]:
+            value = item.get('tags', {}).get('creation_time')
+            if value:
+                try:
+                    parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                    if parsed.year >= 1970:
+                        return parsed.isoformat(), 'metadata'
+                except ValueError:
+                    pass
+    return None, 'unknown'
+
+
 def probe_sources(files):
     sources, offset = [], 0.0
     if not files:
@@ -74,8 +104,10 @@ def probe_sources(files):
             if not cap.isOpened() or not math.isfinite(fps) or fps <= 0 or frames <= 0 or min(width, height) < 2:
                 raise ValueError(f"Cannot read video metadata: {file['name']}")
             duration = frames / fps
+            recorded, basis = recording_date(file)
             sources.append(dict(file, fps=fps, frames=frames, width=width, height=height,
-                                start=offset, end=offset + duration, duration=duration))
+                                start=offset, end=offset + duration, duration=duration,
+                                recording_start=recorded, recording_date_basis=basis))
             offset += duration
         finally:
             cap.release()
@@ -138,7 +170,7 @@ def _analyze(request, out):
     profile = AnalysisProfile()
     with profile.stage('metadata'):
         sources = probe_sources(request['files'])
-    p = dict(step=5, width=960, samples_per_second=0, min_area=800, min_duration=1.0, min_frames=4, gap=1.5, threshold=24)
+    p = dict(step=5, width=256, samples_per_second=2, min_area=800, min_duration=1.0, min_frames=4, gap=1.5, threshold=24)
     p.update({k.replace('-', '_'): v for k, v in request.get('settings', {}).items()})
     if not all(isinstance(v, (int, float)) and math.isfinite(v) for v in p.values()):
         raise ValueError('Detection settings must be finite numbers.')
@@ -146,10 +178,12 @@ def _analyze(request, out):
         raise ValueError('Invalid detection settings.')
     if p['width'] < 32 or p['width'] > 3840 or int(p['width']) != p['width'] or not 0 <= p['samples_per_second'] <= 120:
         raise ValueError('Width must be an integer from 32 to 3840; sample rate must be from 0 to 120.')
-    decoder = request.get('decoder', 'opencv')
-    if decoder not in ('opencv', 'ffmpeg', 'ffmpeg-cuda'):
-        raise ValueError('Decoder must be opencv, ffmpeg or ffmpeg-cuda.')
-    preview = request.get('preview', True)
+    decoder = request.get('decoder', 'proxy')
+    if decoder not in ('proxy', 'opencv', 'ffmpeg', 'ffmpeg-cuda'):
+        raise ValueError('Decoder must be proxy, opencv, ffmpeg or ffmpeg-cuda.')
+    if decoder == 'proxy':
+        p['width'] = min(256, p['width'])
+    preview = request.get('preview', False)
     if not isinstance(preview, bool):
         raise ValueError('Preview must be a boolean.')
     legacy_interval = p['step'] / sources[0]['fps']
@@ -164,10 +198,26 @@ def _analyze(request, out):
     effective_min_frames = max(1, math.ceil(positive_seconds/interval - 1e-9))
     warmup_samples = max(1, math.ceil(5*legacy_interval/interval - 1e-9))
     duration = sources[-1]['end']
+    proxies = []
+    if decoder == 'proxy':
+        acceleration = request.get('acceleration', 'auto')
+        if acceleration not in ('auto', 'cpu'):
+            raise ValueError('Acceleration must be auto or cpu.')
+        cache = request.get('proxy_cache', out/'proxies')
+        for i, source in enumerate(sources):
+            def status(fraction, message):
+                write_json(out/'status.json', dict(state='processing', phase='downsize',
+                           pct=80*(source['start']+fraction*source['duration'])/duration,
+                           message=f"{message} · {i+1}/{len(sources)} · {source['name']}"))
+            with profile.stage('proxy_prepare'):
+                proxies.append(prepare_proxy(source, interval, width, height, cache, status, acceleration))
+        profile.source_frames = sum(s['frames'] for s, proxy in zip(sources, proxies) if not proxy['cached'])
     model = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=p['threshold'], detectShadows=True)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     segments, current = [], None
     sample_index = 0
+    warmup_until = warmup_samples
+    last_status = 0
     run_id = request.get('run_id', str(uuid.uuid4()))
 
     def commit():
@@ -196,8 +246,20 @@ def _analyze(request, out):
                                '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p',
                                '-movflags', '+faststart', str(out/'preview.mp4')], stdin=subprocess.PIPE, stderr=errors) if preview else None
         try:
-            for source in sources:
-                frames = (opencv_frames(source, interval, sample_index, profile) if decoder == 'opencv'
+            for source_index, source in enumerate(sources):
+                # Do not merge events or preserve a stale background over overnight gaps.
+                previous = sources[source_index-1] if source_index else None
+                if previous and previous.get('recording_start') and source.get('recording_start'):
+                    a = datetime.fromisoformat(previous['recording_start'].replace('Z', '+00:00')).timestamp()
+                    b = datetime.fromisoformat(source['recording_start'].replace('Z', '+00:00')).timestamp()
+                    if abs(b-a-previous['duration']) > 1:
+                        if current:
+                            current['end'] = min(current['end'], source['start'])
+                        commit()
+                        model = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=p['threshold'], detectShadows=True)
+                        warmup_until = sample_index+warmup_samples
+                frames = (proxy_frames(source, interval, proxies[source_index], profile) if decoder == 'proxy'
+                          else opencv_frames(source, interval, sample_index, profile) if decoder == 'opencv'
                           else ffmpeg_frames(source, interval, width, height, profile, hardware=decoder == 'ffmpeg-cuda'))
                 try:
                     for frame_idx, frame in frames:
@@ -214,7 +276,7 @@ def _analyze(request, out):
                                 mask = cv2.dilate(mask, kernel, iterations=2)
                                 contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                             boxes, area = [], 0.0
-                            if sample_index >= warmup_samples:
+                            if sample_index >= warmup_until:
                                 for c in contours:
                                     a = cv2.contourArea(c)
                                     if a >= effective_min_area:
@@ -238,9 +300,11 @@ def _analyze(request, out):
                                     ff.stdin.write(small.tobytes())
                             sample_index += 1
                             profile.samples += 1
-                            if sample_index % 30 == 0:
+                            if time.monotonic()-last_status >= 1:
                                 with profile.stage('output_io'):
-                                    write_json(out/'status.json', dict(state='processing', pct=min(99, t/duration*100), message=f"Analyzing {source['name']}", segments=len(segments)))
+                                    pct = 80+20*t/duration if decoder == 'proxy' else t/duration*100
+                                    write_json(out/'status.json', dict(state='processing', phase='analyze', pct=min(99, pct), message=f"Finding motion · {source['name']}", segments=len(segments)))
+                                last_status = time.monotonic()
                 finally:
                     frames.close()
             commit()
@@ -267,6 +331,7 @@ def _analyze(request, out):
                   revision=request['revision'], model='OpenCV MOG2', params=p, sources=public_sources,
                   duration=duration, out_size=[width, height], out_fps=1/interval, sample_interval=interval,
                   warmup_seconds=warmup_samples*interval, preview_available=preview, decoder=decoder,
+                  proxies=[{k: v for k, v in proxy.items() if k != 'path'} for proxy in proxies],
                   effective_min_area=effective_min_area, effective_min_frames=effective_min_frames,
                   minimum_positive_seconds=positive_seconds, coordinate_system='pixels in out_size; origin top-left; sources letterboxed',
                   timestamp_basis='continuous project time; source frame count / FPS',
